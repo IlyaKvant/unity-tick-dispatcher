@@ -5,7 +5,9 @@ namespace UnityTickDispatcher
 {
     internal sealed class TickPool
     {
-        private readonly Stack<TickData> _pool = new Stack<TickData>(500);
+        private const int InitialPoolCapacity = 500;
+
+        private readonly Stack<TickData> _pool = new Stack<TickData>(InitialPoolCapacity);
         private readonly object _poolLock = new object();
         private long _versionSeed;
 

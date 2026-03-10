@@ -9,13 +9,14 @@ namespace UnityTickDispatcher
     {
         private const int InitialTicksCapacity = 500;
         private const int InitialBufferCapacity = 100;
+        private const int InitialQueueCapacity = 100;
 
         private readonly TickPool _pool;
         private readonly List<TickData> _ticks = new List<TickData>(InitialTicksCapacity);
         private readonly List<TickData> _returnToPoolBuffer = new List<TickData>(InitialBufferCapacity);
 
-        private Queue<TickData> _queueWrite = new Queue<TickData>(100);
-        private Queue<TickData> _queueRead = new Queue<TickData>(100);
+        private Queue<TickData> _queueWrite = new Queue<TickData>(InitialQueueCapacity);
+        private Queue<TickData> _queueRead = new Queue<TickData>(InitialQueueCapacity);
 
         private readonly object _queueLock = new object();
         private int _tail;

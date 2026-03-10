@@ -5,6 +5,8 @@ namespace UnityTickDispatcher
 {
     public sealed class TickManager : MonoBehaviour
     {
+        [SerializeField] private PlayerLoopTiming loopTiming = PlayerLoopTiming.FixedUpdate | PlayerLoopTiming.Update;
+
         private static readonly ActionDisposable NoopDisposable = new ActionDisposable(null);
         private static bool IsInitialized => _instance != null;
         private static TickManager _instance;
@@ -15,6 +17,7 @@ namespace UnityTickDispatcher
         private TickProcessing _lateUpdateProcessing;
         private TickProcessing _lastUpdateProcessing;
         private TickProcessing _lastLateUpdateProcessing;
+        private PlayerLoopTiming _loopTiming;
 
         #if UNITY_EDITOR
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -33,47 +36,49 @@ namespace UnityTickDispatcher
             }
 
             _instance = this;
+            _loopTiming = loopTiming;
 
             _tickPool = new TickPool();
-            _fixedProcessing = new TickProcessing(_tickPool);
-            _updateProcessing = new TickProcessing(_tickPool);
-            _lastUpdateProcessing = new TickProcessing(_tickPool);
-            _lateUpdateProcessing = new TickProcessing(_tickPool);
-            _lastLateUpdateProcessing = new TickProcessing(_tickPool);
+            _fixedProcessing = FastContains(_loopTiming, PlayerLoopTiming.FixedUpdate) ? new TickProcessing(_tickPool) : null;
+            _updateProcessing = FastContains(_loopTiming, PlayerLoopTiming.Update) ? new TickProcessing(_tickPool) : null;
+            _lastUpdateProcessing = FastContains(_loopTiming, PlayerLoopTiming.LastUpdate) ? new TickProcessing(_tickPool) : null;
+            _lateUpdateProcessing = FastContains(_loopTiming, PlayerLoopTiming.LateUpdate) ? new TickProcessing(_tickPool) : null;
+            _lastLateUpdateProcessing = FastContains(_loopTiming, PlayerLoopTiming.LastLateUpdate) ? new TickProcessing(_tickPool) : null;
         }
 
         private void FixedUpdate()
         {
-            _fixedProcessing.Run();
+            _fixedProcessing?.Run();
         }
 
         private void Update()
         {
-            _updateProcessing.Run();
-            _lastUpdateProcessing.Run();
+            _updateProcessing?.Run();
+            _lastUpdateProcessing?.Run();
         }
 
         private void LateUpdate()
         {
-            _lateUpdateProcessing.Run();
-            _lastLateUpdateProcessing.Run();
+            _lateUpdateProcessing?.Run();
+            _lastLateUpdateProcessing?.Run();
         }
 
         private void OnDestroy()
         {
             if (_instance == this)
             {
+                // TODO clear local fields
                 _instance = null;
             }
         }
 
         public void Optimize()
         {
-            _fixedProcessing.Optimize();
-            _updateProcessing.Optimize();
-            _lastUpdateProcessing.Optimize();
-            _lateUpdateProcessing.Optimize();
-            _lastLateUpdateProcessing.Optimize();
+            _fixedProcessing?.Optimize();
+            _updateProcessing?.Optimize();
+            _lastUpdateProcessing?.Optimize();
+            _lateUpdateProcessing?.Optimize();
+            _lastLateUpdateProcessing?.Optimize();
         }
 
         public static IDisposable Subscribe(Action action, PlayerLoopTiming loopTiming = PlayerLoopTiming.Update)
@@ -83,29 +88,18 @@ namespace UnityTickDispatcher
                 return NoopDisposable;
             }
 
-            switch (loopTiming)
+            var processing = loopTiming switch
             {
-                case PlayerLoopTiming.FixedUpdate:
-                    _instance._fixedProcessing.Add(action);
-                    break;
-                case PlayerLoopTiming.Update:
-                    _instance._updateProcessing.Add(action);
-                    break;
-                case PlayerLoopTiming.LastUpdate:
-                    _instance._lastUpdateProcessing.Add(action);
-                    break;
-                case PlayerLoopTiming.LateUpdate:
-                    _instance._lateUpdateProcessing.Add(action);
-                    break;
-                case PlayerLoopTiming.LastLateUpdate:
-                    _instance._lastLateUpdateProcessing.Add(action);
-                    break;
-                default:
-                    Debug.LogError($"LoopTiming {loopTiming} not implemented.");
-                    break;
-            }
+                PlayerLoopTiming.FixedUpdate => _instance._fixedProcessing,
+                PlayerLoopTiming.Update => _instance._updateProcessing,
+                PlayerLoopTiming.LastUpdate => _instance._lastUpdateProcessing,
+                PlayerLoopTiming.LateUpdate => _instance._lateUpdateProcessing,
+                PlayerLoopTiming.LastLateUpdate => _instance._lastLateUpdateProcessing,
 
-            return NoopDisposable;
+                _ => null
+            };
+
+            return processing == null ? NoopDisposable : processing.Add(action);
         }
 
         public static TickHandle SubscribeAsHandle(Action action, PlayerLoopTiming loopTiming = PlayerLoopTiming.Update)
@@ -115,29 +109,20 @@ namespace UnityTickDispatcher
                 return default;
             }
 
-            switch (loopTiming)
+            var processing = loopTiming switch
             {
-                case PlayerLoopTiming.FixedUpdate:
-                    _instance._fixedProcessing.AddHandle(action);
-                    break;
-                case PlayerLoopTiming.Update:
-                    _instance._updateProcessing.AddHandle(action);
-                    break;
-                case PlayerLoopTiming.LastUpdate:
-                    _instance._lastUpdateProcessing.AddHandle(action);
-                    break;
-                case PlayerLoopTiming.LateUpdate:
-                    _instance._lateUpdateProcessing.AddHandle(action);
-                    break;
-                case PlayerLoopTiming.LastLateUpdate:
-                    _instance._lastLateUpdateProcessing.AddHandle(action);
-                    break;
-                default:
-                    Debug.LogError($"LoopTiming {loopTiming} not implemented.");
-                    break;
-            }
+                PlayerLoopTiming.FixedUpdate => _instance._fixedProcessing,
+                PlayerLoopTiming.Update => _instance._updateProcessing,
+                PlayerLoopTiming.LastUpdate => _instance._lastUpdateProcessing,
+                PlayerLoopTiming.LateUpdate => _instance._lateUpdateProcessing,
+                PlayerLoopTiming.LastLateUpdate => _instance._lastLateUpdateProcessing,
 
-            return default;
+                _ => null
+            };
+
+            return processing == null ? default : processing.AddHandle(action);
         }
+
+        private bool FastContains(PlayerLoopTiming whole, PlayerLoopTiming part) => (whole & part) == part;
     }
 }
