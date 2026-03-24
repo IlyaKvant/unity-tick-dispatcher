@@ -1,6 +1,6 @@
 using System;
 
-namespace UnityTickDispatcher
+namespace UnityTickDispatcher.Internal
 {
     internal sealed class TickSubscription : IDisposable
     {
