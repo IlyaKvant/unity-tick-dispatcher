@@ -6,6 +6,7 @@ namespace UnityTickDispatcher
     public enum LoopTiming
     {
         None = 0,
+
         FixedUpdate = 1 << 3,
 
         Update = 1 << 6,
@@ -13,5 +14,7 @@ namespace UnityTickDispatcher
 
         LateUpdate = 1 << 9,
         LastLateUpdate = 1 << 10,
+
+        All = ~0
     }
 }

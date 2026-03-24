@@ -1,15 +1,19 @@
 using System;
 using System.Collections.Generic;
 
-namespace UnityTickDispatcher
+namespace UnityTickDispatcher.Internal
 {
-    internal sealed class TickPool
+    internal sealed class TickPool : IDisposable
     {
         private const int InitialPoolCapacity = 500;
 
         private readonly Stack<TickData> _pool = new Stack<TickData>(InitialPoolCapacity);
         private readonly object _poolLock = new object();
         private long _versionSeed;
+
+        public void Dispose()
+        {
+        }
 
         public TickData Retrieve(Action action)
         {

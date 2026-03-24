@@ -1,24 +1,20 @@
-using System;
 using UnityEngine;
+#if !VCONTAINER_SUPPORT
+using System;
+#endif
 
 namespace UnityTickDispatcher
 {
     public sealed class TickManager : MonoBehaviour
     {
-        [SerializeField] private LoopTiming loopTiming = LoopTiming.FixedUpdate | LoopTiming.Update;
+        #if !VCONTAINER_SUPPORT
+        [SerializeField] private LoopTiming loopTiming = LoopTiming.All;
 
         public static bool IsInitialized => _instance != null;
 
-        private static readonly ActionDisposable NoopDisposable = new ActionDisposable(null);
         private static TickManager _instance;
 
-        private TickPool _tickPool;
-        private TickProcessing _fixedProcessing;
-        private TickProcessing _updateProcessing;
-        private TickProcessing _lateUpdateProcessing;
-        private TickProcessing _lastUpdateProcessing;
-        private TickProcessing _lastLateUpdateProcessing;
-        private LoopTiming _loopTiming;
+        private TickDispatcher TickDispatcher { get; set; }
 
         #if UNITY_EDITOR
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -37,40 +33,35 @@ namespace UnityTickDispatcher
             }
 
             _instance = this;
-            _loopTiming = loopTiming;
-
-            _tickPool = new TickPool();
-            _fixedProcessing = _loopTiming.Contains(LoopTiming.FixedUpdate) ? new TickProcessing(_tickPool) : null;
-            _updateProcessing = _loopTiming.Contains(LoopTiming.Update) ? new TickProcessing(_tickPool) : null;
-            _lastUpdateProcessing = _loopTiming.Contains(LoopTiming.LastUpdate) ? new TickProcessing(_tickPool) : null;
-            _lateUpdateProcessing = _loopTiming.Contains(LoopTiming.LateUpdate) ? new TickProcessing(_tickPool) : null;
-            _lastLateUpdateProcessing = _loopTiming.Contains(LoopTiming.LastLateUpdate) ? new TickProcessing(_tickPool) : null;
+            TickDispatcher = new TickDispatcher(loopTiming);
         }
 
         private void FixedUpdate()
         {
-            _fixedProcessing?.Run();
+            TickDispatcher.FixedTick();
         }
 
         private void Update()
         {
-            _updateProcessing?.Run();
-            _lastUpdateProcessing?.Run();
+            TickDispatcher.Tick();
+            TickDispatcher.PostTick();
         }
 
         private void LateUpdate()
         {
-            _lateUpdateProcessing?.Run();
-            _lastLateUpdateProcessing?.Run();
+            TickDispatcher.LateTick();
+            TickDispatcher.PostLateTick();
         }
 
         private void OnDestroy()
         {
-            if (_instance == this)
+            if (_instance != this)
             {
-                // TODO clear local fields
-                _instance = null;
+                return;
             }
+
+            _instance = null;
+            TickDispatcher = null;
         }
 
         public static void Optimize()
@@ -80,71 +71,26 @@ namespace UnityTickDispatcher
                 return;
             }
 
-            _instance._fixedProcessing?.Optimize();
-            _instance._updateProcessing?.Optimize();
-            _instance._lastUpdateProcessing?.Optimize();
-            _instance._lateUpdateProcessing?.Optimize();
-            _instance._lastLateUpdateProcessing?.Optimize();
+            _instance.TickDispatcher.Optimize();
         }
 
         public static IDisposable Subscribe(Action action, LoopTiming loopTiming = LoopTiming.Update)
-        {
-            if (!IsInitialized)
-            {
-                return NoopDisposable;
-            }
-
-            var processing = loopTiming switch
-            {
-                LoopTiming.FixedUpdate => _instance._fixedProcessing,
-                LoopTiming.Update => _instance._updateProcessing,
-                LoopTiming.LastUpdate => _instance._lastUpdateProcessing,
-                LoopTiming.LateUpdate => _instance._lateUpdateProcessing,
-                LoopTiming.LastLateUpdate => _instance._lastLateUpdateProcessing,
-
-                _ => null
-            };
-
-            return processing?.Add(action) ?? NoopDisposable;
-        }
+            => IsInitialized ? _instance.TickDispatcher.Subscribe(action, loopTiming) : TickDispatcher.NoopDisposable;
 
         public static TickHandle SubscribeAsHandle(Action action, LoopTiming loopTiming = LoopTiming.Update)
-        {
-            if (!IsInitialized)
-            {
-                return default;
-            }
-
-            var processing = loopTiming switch
-            {
-                LoopTiming.FixedUpdate => _instance._fixedProcessing,
-                LoopTiming.Update => _instance._updateProcessing,
-                LoopTiming.LastUpdate => _instance._lastUpdateProcessing,
-                LoopTiming.LateUpdate => _instance._lateUpdateProcessing,
-                LoopTiming.LastLateUpdate => _instance._lastLateUpdateProcessing,
-
-                _ => null
-            };
-
-            return processing?.AddHandle(action) ?? default;
-        }
+            => IsInitialized ? _instance.TickDispatcher.SubscribeAsHandle(action, loopTiming) : default;
 
         public static void SubscribeAsHandle(Action action, ref TickHandle handle, LoopTiming loopTiming = LoopTiming.Update)
         {
-            handle.Dispose();
-
-            var processing = loopTiming switch
+            if (IsInitialized)
             {
-                LoopTiming.FixedUpdate => _instance._fixedProcessing,
-                LoopTiming.Update => _instance._updateProcessing,
-                LoopTiming.LastUpdate => _instance._lastUpdateProcessing,
-                LoopTiming.LateUpdate => _instance._lateUpdateProcessing,
-                LoopTiming.LastLateUpdate => _instance._lastLateUpdateProcessing,
+                _instance.TickDispatcher.SubscribeAsHandle(action, ref handle, loopTiming);
+                return;
+            }
 
-                _ => null
-            };
-
-            handle = IsInitialized ? processing?.AddHandle(action) ?? default : default;
+            handle.Dispose();
+            handle = default;
         }
+        #endif
     }
 }
