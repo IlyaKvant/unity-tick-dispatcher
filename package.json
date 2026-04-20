@@ -1,10 +1,27 @@
 {
-  "name": "com.ilyakvant.unitytickdispatcher",
+  "name": "com.kefirbox.unitytickdispatcher",
   "displayName": "Unity Tick Dispatcher",
-  "version": "1.1.0",
-  "unity": "2021.1",
-  "dependencies": {},
   "description": "Tick dispatcher for Single Update for Unity",
-  "keywords": ["Unity", "extensions"],
-  "license": "MIT"
+  "version": "1.1.1",
+  "unity": "2021.1",
+  "documentationUrl": "https://github.com/KefirBox/unity-tick-dispatcher",
+  "changelogUrl": "https://github.com/KefirBox/unity-tick-dispatcher/releases",
+  "hideInEditor": false,
+  "dependencies": {},
+  "keywords": [
+    "Unity",
+    "Extensions",
+    "Optimization"
+  ],
+  "category": "Extension",
+  "repository": {
+    "url": "https://github.com/KefirBox/unity-tick-dispatcher.git",
+    "type": "git"
+  },
+  "licensesUrl": "https://github.com/KefirBox/unity-tick-dispatcher/blob/main/LICENSE.md",
+  "license": "MIT",
+  "author": {
+    "name": "KefirBox Team",
+    "url": "https://github.com/KefirBox"
+  }
 }

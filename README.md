@@ -15,17 +15,19 @@ A small extension that allows you to use a single Update/FixedUpdate/etc.
 
 ### Install via UPM (using Git URL)
 
-1. Navigate to your project's Packages folder and open the manifest.json file.
-2. Add this line to "dependencies"
+1. Install package by adding the following to Package Manager:
 
-```json itle="Packages/manifest.json"
-{
-    "dependencies": {
-        "com.ilyakvant.unitytickdispatcher": "https://github.com/IlyaKvant/unity-tick-dispatcher.git#1.1.0"
-        // other dependencies
-    }
-}
 ```
+https://github.com/KefirBox/unity-tick-dispatcher.git#1.1.1
+```
+
+or by adding
+
+```
+"com.kefirbox.unitytickdispatcher": "https://github.com/KefirBox/unity-tick-dispatcher.git#1.1.1"
+```
+
+to the `Packages/manifest.json` file.
 
 ## Usage
 
